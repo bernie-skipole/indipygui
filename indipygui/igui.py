@@ -68,6 +68,11 @@ class IPyGui():
             self.sc.set_connected()
 
 
+    def send_data(self, data):
+        "Send data down self._txque"
+        self._txque.put(data)
+
+
     def closeconnection(self):
         "Shut down the connection"
         # Send a None value to shut down the queclient

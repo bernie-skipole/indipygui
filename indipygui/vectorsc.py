@@ -1,5 +1,5 @@
 
-
+import functools
 
 import customtkinter
 
@@ -122,15 +122,132 @@ class LightPane(VectorParentPane):
             self.members[membername][1].configure(text=value, fg_color=background, text_color=color)
             self.members[membername][2] = value
 
-class SwitchPane(VectorParentPane):
+
+
+class TextPane(VectorParentPane):
 
     def __init__(self, ipygui, gtab, vector, row):
         super().__init__(ipygui, gtab, vector, row)
 
+        permission = vector.perm
+
+        self.members_frame.grid_columnconfigure(0, weight=1)  # column 0 for label
+
+        self.submit_button = None
+
+        self.members = {}
+        memberrow = 0
+        if vector.perm == "ro":
+            # there is no data submission
+
+            self.members_frame.grid_columnconfigure(1, weight=3) # column 1 for the received text
+
+            lastrow = len(vector)-1
+            for membername, value in vector.items():
+
+                if not value:
+                    value = "Waiting for received value"
+                    color = "white"
+                else:
+                    color = "black"
+
+                label = vector.memberlabel(membername)
+
+                self.members[membername] = [ value,
+                                             customtkinter.CTkLabel(self.members_frame, text=label, anchor="e"),
+                                             customtkinter.CTkLabel(self.members_frame, text=value, anchor="w",
+                                                                fg_color=("light grey", "dark grey"),
+                                                                text_color=color),
+                                            ]
+                if memberrow == lastrow:
+                    # extra space beneath the last member
+                    self.members[membername][1].grid(row=memberrow, column=0, padx=20, pady=(10,20), sticky="e")
+                    self.members[membername][2].grid(row=memberrow, column=1, padx=(10,50), pady=(10,20), sticky="we")
+                else:
+                    self.members[membername][1].grid(row=memberrow, column=0, padx=20, pady=10, sticky="e")
+                    self.members[membername][2].grid(row=memberrow, column=1, padx=(10,50), pady=10, sticky="we")
+
+                memberrow += 1
+        else:
+
+            self.members_frame.grid_columnconfigure(1, weight=3) # column 1 for the received text, and input field
+                                                                 # column 2, unweighted, for the clear field
+ 
+
+            for membername, value in vector.items():
+
+                if not value:
+                    value = "Waiting for received value"
+                    color = "white"
+                else:
+                    color = "black"
+
+                label = vector.memberlabel(membername)
+                clearcommand = functools.partial(self._clear_input, membername)
+
+                self.members[membername] = [ value,
+                                             customtkinter.CTkLabel(self.members_frame, text=label, anchor="e"),
+                                             customtkinter.CTkLabel(self.members_frame, text=value, anchor="w",
+                                                                fg_color=("light grey", "dark grey"),
+                                                                text_color=color),
+                                             customtkinter.CTkEntry(self.members_frame, corner_radius=0, placeholder_text="Input new text"),
+                                             customtkinter.CTkButton(self.members_frame, text="Clear", command=clearcommand)
+
+                                           ]
+                self.members[membername][1].grid(row=memberrow, column=0, padx=20, pady=10, sticky="e")
+                self.members[membername][2].grid(row=memberrow, column=1, padx=(10,50), pady=10, sticky="we")
+                self.members[membername][3].grid(row=memberrow+1, column=1, padx=(10,50), pady=10, sticky="we")
+                if vector[membername]:
+                    self.members[membername][3].set(value)
+                self.members[membername][4].grid(row=memberrow+1, column=2, padx=(10,50), pady=10)
+                memberrow += 2
+
+            self.submit_button = customtkinter.CTkButton(self.members_frame, text="Submit", command=self._submit)
+            self.submit_button.grid(row=memberrow, column=1, padx=(10,50), pady=(10, 20), sticky="e")
+
+
     def set_vector(self, vector):
         super().set_vector(vector)
 
-class TextPane(VectorParentPane):
+        for membername, value in vector.items():
+            if membername not in self.members:
+                continue
+            if value == self.members[membername][0]:
+                # no change
+                continue
+            self.members[membername][0] = value
+            self.members[membername][2].configure(text=value, text_color="black")
+
+    def _clear_input(self, membername):
+        if self.vector.perm == "ro":
+            return
+        if membername not in self.members:
+            return
+        value = self.members[membername][3].get()
+        if value:
+            self.members[membername][3].delete(0, len(value))
+
+    def _submit(self):
+        "Get data from entry widgets and send to queclient using ipygui.send_data"
+        if self.vector.perm == "ro":
+            return
+        valuedict = {}
+        for membername, widgets in self.members.items():
+            valuedict[membername] = widgets[3].get()
+        # send (devicename, vectorname, value)
+        # where value is a membername to membervalue dictionary, which will be transmitted to the server.
+        data = (self.vector.devicename, self.vector.name, valuedict)
+        self.ipygui.send_data(data)
+
+        
+
+
+
+
+
+
+
+class SwitchPane(VectorParentPane):
 
     def __init__(self, ipygui, gtab, vector, row):
         super().__init__(ipygui, gtab, vector, row)
