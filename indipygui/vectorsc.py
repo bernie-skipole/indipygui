@@ -131,8 +131,6 @@ class TextPane(VectorParentPane):
 
         permission = vector.perm
 
-        self.members_frame.grid_columnconfigure(0, weight=1)  # column 0 for label
-
         self.submit_button = None
 
         self.members = {}
