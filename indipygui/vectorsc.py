@@ -353,7 +353,10 @@ class NumberPane(VectorParentPane):
             return
         valuedict = {}
         for membername, widgets in self.members.items():
-            value = widgets[3].get()
+            value = widgets[3].get().strip()
+            if not value:
+                # an empty string is an error
+                return
             try:
                 floatvalue = getfloat(value)
             except TypeError:
