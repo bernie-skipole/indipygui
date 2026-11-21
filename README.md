@@ -1,8 +1,23 @@
 # indipygui
 GUI client to connect to an INDI service
 
-Currently being built, not yet ready for use
+**Currently being built, not yet ready for use, not yet available on PyPI.**
 
+indipygui uses the tkinter package, which some Python distributions do not include, as it is a system package it cannot be installed from PyPI. If using debian, or debian derived distributions you may need to install tkinter with:
+
+sudo apt install python3-tk
+
+Currently indipygui is not on PyPI, but can be installed from github. It may only have partial functionality.
+
+Create and activate a virtual environment, and then install with:
+
+pip install git+https://github.com/bernie-skipole/indipygui
+
+This also installs several further dependencies from pypi.
+
+Then run the program with:
+
+python -m indipygui
 
 The package help is:
 
@@ -17,7 +32,6 @@ The package help is:
       --blobfolder BLOBFOLDER  Optional folder where BLOB's will be saved.
 
       --version    show program's version number and exit
-
 
 
 

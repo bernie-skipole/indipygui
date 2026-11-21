@@ -254,10 +254,7 @@ class NumberPane(VectorParentPane):
     def __init__(self, ipygui, gtab, vector, row):
         super().__init__(ipygui, gtab, vector, row)
 
-
         permission = vector.perm
-
-        self.submit_button = None
 
         self.members = {}
         memberrow = 0
@@ -293,7 +290,6 @@ class NumberPane(VectorParentPane):
             self.members_frame.grid_columnconfigure(1, weight=3) # column 1 for the received text, and input field
                                                                  # column 2, unweighted, for the clear field
  
-
             for membername, value in vector.items():
 
                 value = vector.getformattedvalue(membername)
@@ -321,8 +317,10 @@ class NumberPane(VectorParentPane):
             self.submit_button = customtkinter.CTkButton(self.members_frame, text="Submit", command=self._submit)
             self.submit_button.grid(row=memberrow, column=1, padx=(10,50), pady=(10, 20), sticky="e")
 
-            self.errormessage = None
-
+            # create an error message and immediately remove it, ready to be shown when needed
+            self.errormessage = customtkinter.CTkLabel(self.members_frame, text="Invalid number!", anchor="e")
+            self.errormessage.grid(row=memberrow, column=1, padx=10, pady=(10, 20), sticky="w")
+            self.errormessage.grid_remove()
 
 
     def set_vector(self, vector):
@@ -340,6 +338,7 @@ class NumberPane(VectorParentPane):
             self.members[membername][0] = value
             self.members[membername][2].configure(text=value, text_color="black")
 
+
     def _clear_input(self, membername):
         if self.vector.perm == "ro":
             return
@@ -349,12 +348,15 @@ class NumberPane(VectorParentPane):
         if value:
             self.members[membername][3].delete(0, len(value))
 
+
     def _submit(self):
         "Get data from entry widgets and send to queclient using ipygui.send_data"
         if self.vector.perm == "ro":
             return
         valuedict = {}
         allok = True
+        # show the error message, to be removed if submit is ok
+        self.errormessage.grid()
         for membername, widgets in self.members.items():
             widgets[3].configure(border_color="black")
             value = widgets[3].get().strip()
@@ -373,20 +375,13 @@ class NumberPane(VectorParentPane):
         # send (devicename, vectorname, valuedict)
         # where valuedict is a membername to membervalue dictionary, which will be transmitted to the server.
         if allok:
-            if self.errormessage is not None:
-                self.errormessage.destroy()
+            self.errormessage.grid_remove()
             data = (self.vector.devicename, self.vector.name, valuedict)
             self.ipygui.send_data(data)
             # update the state
             background, color = valuecolor('Busy')
             self.statetime.configure(text=localtimestring(datetime.now(tz=timezone.utc)))
             self.state.configure(text='Busy', fg_color=background, text_color=color)
-        else:
-            self.errormessage = customtkinter.CTkLabel(self.members_frame, text="Invalid number!", anchor="e")
-            self.errormessage.grid(row=len(self.members)*2, column=1, padx=10, pady=(10, 20), sticky="w")
-
-
-
 
 
 
