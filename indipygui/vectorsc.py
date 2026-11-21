@@ -321,6 +321,8 @@ class NumberPane(VectorParentPane):
             self.submit_button = customtkinter.CTkButton(self.members_frame, text="Submit", command=self._submit)
             self.submit_button.grid(row=memberrow, column=1, padx=(10,50), pady=(10, 20), sticky="e")
 
+            self.errormessage = None
+
 
 
     def set_vector(self, vector):
@@ -352,27 +354,36 @@ class NumberPane(VectorParentPane):
         if self.vector.perm == "ro":
             return
         valuedict = {}
+        allok = True
         for membername, widgets in self.members.items():
+            widgets[3].configure(border_color="black")
             value = widgets[3].get().strip()
-            if not value:
+            if value:
+                try:
+                    floatvalue = getfloat(value)
+                except TypeError:
+                    allok = False
+                    widgets[3].configure(border_color="red")
+                else:            
+                    valuedict[membername] = value
+            else:
                 # an empty string is an error
-                return
-            try:
-                floatvalue = getfloat(value)
-            except TypeError:
-                # On an error, send nothing
-                return
-            else:            
-                valuedict[membername] = value
+                allok = False
+                widgets[3].configure(border_color="red")
         # send (devicename, vectorname, valuedict)
         # where valuedict is a membername to membervalue dictionary, which will be transmitted to the server.
-        if valuedict:
+        if allok:
+            if self.errormessage is not None:
+                self.errormessage.destroy()
             data = (self.vector.devicename, self.vector.name, valuedict)
             self.ipygui.send_data(data)
             # update the state
             background, color = valuecolor('Busy')
             self.statetime.configure(text=localtimestring(datetime.now(tz=timezone.utc)))
             self.state.configure(text='Busy', fg_color=background, text_color=color)
+        else:
+            self.errormessage = customtkinter.CTkLabel(self.members_frame, text="Invalid number!", anchor="e")
+            self.errormessage.grid(row=len(self.members)*2, column=1, padx=10, pady=(10, 20), sticky="w")
 
 
 
