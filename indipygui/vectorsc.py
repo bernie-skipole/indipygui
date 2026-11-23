@@ -398,8 +398,8 @@ class SwitchPane(VectorParentPane):
         if vector.perm == "ro":
             # there is no data submission
 
-            self.members_frame.grid_columnconfigure(0, weight=1)
-            self.members_frame.grid_columnconfigure(1, weight=1)
+            self.members_frame.grid_columnconfigure(0, weight=1, uniform='tag')
+            self.members_frame.grid_columnconfigure(1, weight=1, uniform='tag')
 
             self.switch_vars = {}
 
@@ -416,7 +416,6 @@ class SwitchPane(VectorParentPane):
                                              customtkinter.CTkSwitch(self.members_frame, text=label, variable=self.switch_vars[membername],
                                                                      onvalue="On", offvalue="Off", state="disabled", text_color_disabled=("black","white"))
                                             ]
-                self.members[membername][2]
                 if memberrow == lastrow:
                     # extra space beneath the last member
                     self.members[membername][1].grid(row=memberrow, column=0, padx=20, pady=(10,20), sticky="e")
@@ -426,6 +425,107 @@ class SwitchPane(VectorParentPane):
                     self.members[membername][2].grid(row=memberrow, column=1, padx=(10,50), pady=10, sticky="w")
 
                 memberrow += 1
+        else:
+ 
+            self.members_frame.grid_columnconfigure(0, weight=1, uniform='tag')
+            self.members_frame.grid_columnconfigure(1, weight=1, uniform='tag')
+
+            self.switch_vars = {}
+
+            lastrow = len(vector)-1
+            for membername, value in vector.items():
+
+                setswitchcommand = functools.partial(self._set_switch, membername)
+
+                self.switch_vars[membername] = customtkinter.StringVar(value=value)
+
+                label = vector.memberlabel(membername)
+
+ 
+                self.members[membername] = [ value,
+                                             customtkinter.CTkLabel(self.members_frame, text=value, anchor="e"), 
+                                             customtkinter.CTkSwitch(self.members_frame, text=label, variable=self.switch_vars[membername],
+                                                                     onvalue="On", offvalue="Off", command=setswitchcommand )
+                                            ]
+                self.members[membername][1].grid(row=memberrow, column=0, padx=20, pady=10, sticky="e")
+                self.members[membername][2].grid(row=memberrow, column=1, padx=(10,50), pady=10, sticky="w")
+
+                memberrow += 1
+
+            self.submit_button = customtkinter.CTkButton(self.members_frame, text="Submit", command=self._submit)
+            self.submit_button.grid(row=memberrow, column=1, padx=(10,50), pady=(10, 20), sticky="e")
+
+            # create an error message and immediately remove it, ready to be shown when needed
+            self.errormessage = customtkinter.CTkLabel(self.members_frame, text="Invalid choice!", anchor="e")
+            self.errormessage.grid(row=memberrow, column=0, padx=10, pady=(10, 20), sticky="e")
+            self.errormessage.grid_remove()
+
+
+
+    def _set_switch(self, membername):
+        "Check switches"
+        if self.vector.rule == 'AnyOfMany':
+            return
+        if self.errormessage.grid_info():
+            self.errormessage.grid_remove()
+        newvals = 0
+        # get a count of how many switches are in the on position
+        for eachswitch in self.switch_vars.values():
+            if eachswitch.get() == "On":
+                newvals += 1
+        if self.vector.rule == 'OneOfMany':
+            if newvals > 1:
+                # can only be one
+                for eachmember,valdict in self.members.items():
+                    if eachmember != membername:
+                        self.switch_vars[eachmember].set("Off")
+            elif not newvals:
+                self.errormessage.configure(text="Warning: At least one must be chosen!")
+                self.errormessage.grid()
+        elif self.vector.rule == 'AtMostOne':
+            if newvals > 1:
+                # can only be one
+                for eachmember,valdict in self.members.items():
+                    if eachmember != membername:
+                        self.switch_vars[eachmember].set("Off")
+
+
+    def _submit(self):
+        "Get data from switches and send to queclient using ipygui.send_data"
+        if self.vector.perm == "ro":
+            return
+        if self.vector.rule != 'AnyOfMany':
+            newvals = 0
+            # get a count of how many switches are in the on position
+            for eachswitch in self.switch_vars.values():
+                if eachswitch.get() == "On":
+                    newvals += 1
+            if self.vector.rule == 'OneOfMany':
+                if newvals != 1:
+                    # can only be one
+                    self.errormessage.configure(text="Invalid switch combination!")
+                    self.errormessage.grid()
+                    return
+            elif self.vector.rule == 'AtMostOne':
+                if newvals > 1:
+                    # cannot be more than one
+                    self.errormessage.configure(text="Invalid switch combination!")
+                    self.errormessage.grid()
+                    return
+
+        valuedict = {}
+        for membername, switchvar in self.switch_vars.items():
+           valuedict[membername] = switchvar.get()
+        # submit the switches
+        data = (self.vector.devicename, self.vector.name, valuedict)
+        self.ipygui.send_data(data)
+        # update the state
+        background, color = valuecolor('Busy')
+        self.statetime.configure(text=localtimestring(datetime.now(tz=timezone.utc)))
+        self.state.configure(text='Busy', fg_color=background, text_color=color)
+
+
+
 
     def set_vector(self, vector):
         super().set_vector(vector)
