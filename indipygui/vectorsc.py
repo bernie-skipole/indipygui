@@ -393,15 +393,15 @@ class SwitchPane(VectorParentPane):
 
         permission = vector.perm
 
+        self.members_frame.grid_columnconfigure(0, weight=1, uniform='tag')
+        self.members_frame.grid_columnconfigure(1, weight=1, uniform='tag')
+
+        self.switch_vars = {}
+
         self.members = {}
         memberrow = 0
         if vector.perm == "ro":
             # there is no data submission
-
-            self.members_frame.grid_columnconfigure(0, weight=1, uniform='tag')
-            self.members_frame.grid_columnconfigure(1, weight=1, uniform='tag')
-
-            self.switch_vars = {}
 
             lastrow = len(vector)-1
             for membername, value in vector.items():
@@ -409,30 +409,23 @@ class SwitchPane(VectorParentPane):
                 self.switch_vars[membername] = customtkinter.StringVar(value=value)
 
                 label = vector.memberlabel(membername)
-
  
-                self.members[membername] = [ value,
+                self.members[membername] = [
                                              customtkinter.CTkLabel(self.members_frame, text=value, anchor="e"), 
                                              customtkinter.CTkSwitch(self.members_frame, text=label, variable=self.switch_vars[membername],
                                                                      onvalue="On", offvalue="Off", state="disabled", text_color_disabled=("black","white"))
                                             ]
                 if memberrow == lastrow:
                     # extra space beneath the last member
-                    self.members[membername][1].grid(row=memberrow, column=0, padx=20, pady=(10,20), sticky="e")
-                    self.members[membername][2].grid(row=memberrow, column=1, padx=(10,50), pady=(10,20), sticky="w")
+                    self.members[membername][0].grid(row=memberrow, column=0, padx=20, pady=(10,20), sticky="e")
+                    self.members[membername][1].grid(row=memberrow, column=1, padx=(10,50), pady=(10,20), sticky="w")
                 else:
-                    self.members[membername][1].grid(row=memberrow, column=0, padx=20, pady=10, sticky="e")
-                    self.members[membername][2].grid(row=memberrow, column=1, padx=(10,50), pady=10, sticky="w")
+                    self.members[membername][0].grid(row=memberrow, column=0, padx=20, pady=10, sticky="e")
+                    self.members[membername][1].grid(row=memberrow, column=1, padx=(10,50), pady=10, sticky="w")
 
                 memberrow += 1
         else:
  
-            self.members_frame.grid_columnconfigure(0, weight=1, uniform='tag')
-            self.members_frame.grid_columnconfigure(1, weight=1, uniform='tag')
-
-            self.switch_vars = {}
-
-            lastrow = len(vector)-1
             for membername, value in vector.items():
 
                 setswitchcommand = functools.partial(self._set_switch, membername)
@@ -440,15 +433,14 @@ class SwitchPane(VectorParentPane):
                 self.switch_vars[membername] = customtkinter.StringVar(value=value)
 
                 label = vector.memberlabel(membername)
-
  
-                self.members[membername] = [ value,
+                self.members[membername] = [
                                              customtkinter.CTkLabel(self.members_frame, text=value, anchor="e"), 
                                              customtkinter.CTkSwitch(self.members_frame, text=label, variable=self.switch_vars[membername],
                                                                      onvalue="On", offvalue="Off", command=setswitchcommand )
                                             ]
-                self.members[membername][1].grid(row=memberrow, column=0, padx=20, pady=10, sticky="e")
-                self.members[membername][2].grid(row=memberrow, column=1, padx=(10,50), pady=10, sticky="w")
+                self.members[membername][0].grid(row=memberrow, column=0, padx=20, pady=10, sticky="e")
+                self.members[membername][1].grid(row=memberrow, column=1, padx=(10,50), pady=10, sticky="w")
 
                 memberrow += 1
 
@@ -533,11 +525,7 @@ class SwitchPane(VectorParentPane):
         for membername, value in vector.items():
             if membername not in self.members:
                 continue
-            if value == self.members[membername][0]:
-                # no change
-                continue
-            self.members[membername][0] = value
-            self.members[membername][1].configure(text=value)
+            self.members[membername][0].configure(text=value)
             self.switch_vars[membername].set(value)
 
 
