@@ -534,9 +534,55 @@ class BLOBPane(VectorParentPane):
 
     def __init__(self, ipygui, gtab, vector, row):
         super().__init__(ipygui, gtab, vector, row)
+        permission = vector.perm
+
+        self.members_frame.grid_columnconfigure(0, weight=1, uniform='tag')
+        self.members_frame.grid_columnconfigure(1, weight=3, uniform='tag')
+
+        self.members = {}
+        memberrow = 0
+        if True: #vector.perm == "ro":
+            # there is no data submission
+
+            lastrow = len(vector)-1
+            for membername in vector:
+
+                member = vector.member(membername)
+
+                if self.ipygui.qclient.BLOBfolder is None:
+                    membertext = "RX data: -- BLOB Folder not set --"
+                elif member.filename:
+                    membertext = f"RX data: {member.filename}"
+                else:
+                    membertext = "RX data: -- Nothing yet received --"
+ 
+
+                self.members[membername] = [
+                                            customtkinter.CTkLabel(self.members_frame, text=member.label, anchor="e"),
+                                            customtkinter.CTkLabel(self.members_frame, text=membertext, anchor="w")
+                                            ]
+
+                if memberrow == lastrow:
+                    # extra space beneath the last member
+                    self.members[membername][0].grid(row=memberrow, column=0, padx=20, pady=(10,20), sticky="e")
+                    self.members[membername][1].grid(row=memberrow, column=1, padx=(10,50), pady=(10,20), sticky="w")
+                else:
+                    self.members[membername][0].grid(row=memberrow, column=0, padx=20, pady=10, sticky="e")
+                    self.members[membername][1].grid(row=memberrow, column=1, padx=(10,50), pady=10, sticky="w")
+
+                memberrow += 1
+
+
+
 
     def set_vector(self, vector):
         super().set_vector(vector)
+        for membername in vector:
+            if membername not in self.members:
+                continue
+            member = vector.member(membername)
+            self.members[membername][1].configure(text=f"RX data: {member.filename}")
+
 
 
 
