@@ -536,18 +536,20 @@ class BLOBPane(VectorParentPane):
         super().__init__(ipygui, gtab, vector, row)
         permission = vector.perm
 
-        self.members_frame.grid_columnconfigure(0, weight=1, uniform='tag')
-        self.members_frame.grid_columnconfigure(1, weight=3, uniform='tag')
+
 
         self.members = {}
         memberrow = 0
-        if True: #vector.perm == "ro":
+        if vector.perm == "ro":
             # there is no data submission
+
+            self.members_frame.grid_columnconfigure(0, weight=1, uniform='tag')
+            self.members_frame.grid_columnconfigure(1, weight=3, uniform='tag')
 
             lastrow = len(vector)-1
             for membername in vector:
 
-                member = vector.member(membername)
+                label = vector.memberlabel(membername)
 
                 if self.ipygui.qclient.BLOBfolder is None:
                     membertext = "RX data: -- BLOB Folder not set --"
@@ -558,7 +560,7 @@ class BLOBPane(VectorParentPane):
  
 
                 self.members[membername] = [
-                                            customtkinter.CTkLabel(self.members_frame, text=member.label, anchor="e"),
+                                            customtkinter.CTkLabel(self.members_frame, text=label, anchor="e"),
                                             customtkinter.CTkLabel(self.members_frame, text=membertext, anchor="w")
                                             ]
 
@@ -569,19 +571,78 @@ class BLOBPane(VectorParentPane):
                 else:
                     self.members[membername][0].grid(row=memberrow, column=0, padx=20, pady=10, sticky="e")
                     self.members[membername][1].grid(row=memberrow, column=1, padx=(10,50), pady=10, sticky="w")
+ 
+                memberrow += 1
+
+        elif vector.perm == "wo":
+            # data can be submitted, non is received
+
+            self.members_frame.grid_columnconfigure(0, weight=1, uniform='tag')
+            self.members_frame.grid_columnconfigure(1, weight=3, uniform='tag')
+
+            for membername in vector:
+
+                label = vector.memberlabel(membername)
+
+                browsecommand = functools.partial(self._browse, membername)
+
+                self.members[membername] = [
+                                            customtkinter.CTkLabel(self.members_frame, text=label, anchor="e"),
+                                            customtkinter.CTkEntry(self.members_frame, corner_radius=0, placeholder_text="Input file path to send"),
+                                            customtkinter.CTkButton(self.members_frame, text="Browse", command=browsecommand)
+                                            ]
+
+
+                self.members[membername][0].grid(row=memberrow, column=0, padx=20, pady=10, sticky="e")
+                self.members[membername][1].grid(row=memberrow, column=1, padx=10, pady=10, sticky="we")
+                self.members[membername][2].grid(row=memberrow, column=2, padx=20, pady=10)
 
                 memberrow += 1
 
+            self.button = customtkinter.CTkButton(self.members_frame, text="Submit", command=self._submit)
+            self.button.grid(row=memberrow, column=1, padx=20, pady=(20,30))
+
+
+    def _browse(self, membername):
+        filepath = customtkinter.filedialog.askopenfilename(parent=self.ipygui.devicewindows[self.vector.devicename].devicewin,
+                                                            title="Choose a file")
+        if filepath:
+            self.members[membername][1].set(filepath)
 
 
 
     def set_vector(self, vector):
         super().set_vector(vector)
+        if self.vector.perm == "wo":
+            return
         for membername in vector:
             if membername not in self.members:
                 continue
             member = vector.member(membername)
             self.members[membername][1].configure(text=f"RX data: {member.filename}")
+
+
+    def _submit(self):
+        "Get data from entry widgets and send to queclient using ipygui.send_data"
+        if self.vector.perm == "ro":
+            return
+
+        # The value dictionary should be {membername:(blobvalue, blobsize, blobformat)...}
+        # where blobvalue could be either a bytes object or a filepath.
+
+        valuedict = {}
+        for membername in self.members:
+            filepath = self.members[membername][1].get()
+            if filepath:
+                valuedict[membername] = (filepath, 0, "")
+        # send (devicename, vectorname, valuedict)
+        if valuedict:
+            data = (self.vector.devicename, self.vector.name, valuedict)
+            self.ipygui.send_data(data)
+            # update the state
+            background, color = valuecolor('Busy')
+            self.statetime.configure(text=localtimestring(datetime.now(tz=timezone.utc)))
+            self.state.configure(text='Busy', fg_color=background, text_color=color)
 
 
 
