@@ -550,6 +550,8 @@ class BLOBPane(VectorParentPane):
             for membername in vector:
 
                 label = vector.memberlabel(membername)
+                member = vector.member(membername)
+
 
                 if self.ipygui.qclient.BLOBfolder is None:
                     membertext = "RX data: -- BLOB Folder not set --"
@@ -602,12 +604,54 @@ class BLOBPane(VectorParentPane):
             self.button = customtkinter.CTkButton(self.members_frame, text="Submit", command=self._submit)
             self.button.grid(row=memberrow, column=1, padx=20, pady=(20,30))
 
+        elif vector.perm == "rw":
+            # data can be submitted, and received
+
+            self.members_frame.grid_columnconfigure(0, weight=1, uniform='tag')
+            self.members_frame.grid_columnconfigure(1, weight=3, uniform='tag')
+
+            for membername in vector:
+
+                label = vector.memberlabel(membername)
+                member = vector.member(membername)
+
+                if self.ipygui.qclient.BLOBfolder is None:
+                    membertext = "RX data: -- BLOB Folder not set --"
+                elif member.filename:
+                    membertext = f"RX data: {member.filename}"
+                else:
+                    membertext = "RX data: -- Nothing yet received --"
+
+                browsecommand = functools.partial(self._browse, membername)
+ 
+                self.members[membername] = [
+                                            customtkinter.CTkLabel(self.members_frame, text=label, anchor="e"),
+                                            customtkinter.CTkLabel(self.members_frame, text=membertext, anchor="w"),
+                                            customtkinter.CTkEntry(self.members_frame, corner_radius=0, placeholder_text="Input file path to send"),
+                                            customtkinter.CTkButton(self.members_frame, text="Browse", command=browsecommand)
+                                            ]
+
+
+                self.members[membername][0].grid(row=memberrow, column=0, padx=20, pady=10, sticky="e")    # label
+                self.members[membername][1].grid(row=memberrow, column=1, padx=10, pady=10, sticky="we")   # received text
+                self.members[membername][2].grid(row=memberrow+1, column=1, padx=10, pady=10, sticky="we") # input field
+                self.members[membername][3].grid(row=memberrow+1, column=2, padx=20, pady=10)              # browse button
+
+                memberrow += 2
+
+            self.button = customtkinter.CTkButton(self.members_frame, text="Submit", command=self._submit)
+            self.button.grid(row=memberrow, column=1, padx=20, pady=(20,30))
+
 
     def _browse(self, membername):
         filepath = customtkinter.filedialog.askopenfilename(parent=self.ipygui.devicewindows[self.vector.devicename].devicewin,
                                                             title="Choose a file")
         if filepath:
-            self.members[membername][1].set(filepath)
+            # set the filepath into the input field
+            if self.vector.perm == "wo":
+                self.members[membername][1].set(filepath)
+            elif self.vector.perm == "rw":
+                self.members[membername][2].set(filepath)
 
 
 
@@ -632,7 +676,12 @@ class BLOBPane(VectorParentPane):
 
         valuedict = {}
         for membername in self.members:
-            filepath = self.members[membername][1].get()
+            if self.vector.perm == "wo":
+                filepath = self.members[membername][1].get().strip()
+            elif self.vector.perm == "rw":
+                filepath = self.members[membername][2].get().strip()
+            else:
+                continue
             if filepath:
                 valuedict[membername] = (filepath, 0, "")
         # send (devicename, vectorname, valuedict)
